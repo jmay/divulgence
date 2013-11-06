@@ -1,0 +1,228 @@
+#+OPTIONS: toc:nil num:nil html-style:nil
+#+STARTUP: indent
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="org.css" />
+#+TITLE:
+
+* Thoughts about Sharing for Otherbase
+
+** What is sharing?
+
+Is "a share" an instance of a sharing a single thing (big blob of
+stuff), or can we be sharing a bunch of different things?
+
+Difference being, if it is one thing, then when you say "update" then
+you get back the latest copy of that thing, but if there are multiple
+things then you have to do multiple fetches.
+
+Sharing "a group of things": is that a big lump of data, i.e. a single
+array, or do we have to do all the bits separately?
+
+** What do we call these things
+
+Stick with "a share" for the artifact that collects all the
+information about the act of sharing.
+
+The "thing" that is being shared is the "object".
+
+** Terminology
+
+SHARE vs. SUBSCRIPTION
+
+A *disclosure* defines an entity that is to be made available for sharing with other Otherbase nodes. Also called a *share*.
+
+A *peer* is another Otherbase node.
+
+A *publisher* is a node that makes updates available to peers for a particular disclosure.
+
+A *subscriber* is a node that is pulling updates from peers for a particular disclosure.
+
+A *sharespec* is a JSON document that describes a disclosure that is exposed by a publisher.
+
+- create a share
+- accept
+- subscription: when you accept a share, you create a local subscription; also called inbound-share
+- publisher: the node from which you refresh your subscription
+- subscriber: any other node that is fetching a given subscription from this node
+- peer: the other side of a publisher/subscriber relationship from the current node
+
+
+** Inbound or outbound
+
+This concept covers a sharing-thing that can be published to others,
+subscribed from others, or both.
+
+With multiple peers on either side?
+
+** Decisions
+
+*** Should this gem know about the registry, or should that be in the app?
+
+YES. The gem should be responsible for publishing a share ... that
+means sending info to the registry. So it must know about the
+registry. So it should do all the interaction with the registry,
+hiding the registry API from the app. So for a subscription the app
+need not know about the API.
+
+*** How do we match up the shared data (object, payload) to local entity representations?
+
+If the payload contains special markers then we can use those.
+
+Recursively descend through the payload looking for special markers
+(say we use =_id=). Then build a list of those markers and the data
+that corresponds to each one: this is a transformation of the
+payload. We can afford for this transformation to be slow, because it
+will happen infrequently.
+
+The payload can contain multiple of these markers. If they are nested,
+then we have some sort of container relationship (group/contact).
+
+*** Why should the publisher insert the markers rather than the subscriber?
+
+The publisher might change attributes of the original data, and the
+subscriber needs to know what things have changed. If subscriber is
+adding identifying markers, then it has to guess whether some element
+in the payload is "new" or "updated".
+
+*** What to do if publisher is not available when we try to subscribe to a share? For example, the publishing node is down.
+
+Do not create the subscription. Treat this as a failure, because we
+don't know whether it will work in the future, or even be
+reattempted. The app could create a placeholder for reattempts, but
+the gem will store no record of the failed attempt.
+
+** What can we ask about a share?
+
+Does a share have a name? No.
+
+- What are you sharing?
+- When was the last time you refreshed?
+- When was the first time you refreshed?
+- What is the history of refreshing?
+- Do you have any subscribers?
+- Are you publishing?
+- Are you subscribing?
+- When was the last time a subscriber refreshed?
+- What is the history of subscription activity from others?
+- What has changed recently in this subscription data?
+
+** publishing
+
+=share.publish!=
+
+That should tell the registry that the share is available, and get
+back a URL for locating the share. That URL can be distributed through
+other means.
+
+*** How to find the registry?
+
+*** What parameters to =#publish!=? Expiration info?
+
+*** How does the share know it's own URL?
+
+Because that location is under the control of the main application,
+not the Divulgence gem.
+
+So maybe we need =share.new(url: "...")=?
+
+*** What if you call =publish!= multiple times?
+
+All those previous publication URLs will remain valid?
+
+*** How to revoke a publish? So nobody else will be allowed to subscribe.
+
+
+
+** subscribing
+
+=Divulgence.subscribe(url)=
+
+Give it the URL of the share. This gem should
+
+=share.sync= or =share.refresh=
+
+returns an instance of a share.
+
+*** how to protect against duplication?
+
+If you subscribe twice to the same code, what do you get back?
+
+*** does that actually pull data from the peer?
+
+Or does it just "set things up". Does it contact the peer at all, or
+just the registry?
+
+*** how to map elements in subscription payload to local entities?
+
+
+
+
+
+** Persistence
+
+Does the gem store the sharing info somewhere or is that the
+responsibility of the application? What info is there?
+
+Does the gem capture the history, or does the app have to do that too?
+
+** Scenarios
+
+*** Standard A -> B
+
+A publishes a list of Friends.
+
+B subscribes to this list. B does not publish the list back to A.
+
+> all the contacts on the list are added to B's contacts, and a new
+Friends group is created for B.
+
+B adds a new contact to the list. (This is not sent back to A.)
+
+> THIS IS OK. The system will NOT say "this list is read-only, you
+can't add to it."
+
+A adds a new contact, and B refreshes the subscription.
+
+> B should get the new contact, in the group.
+
+A deletes a contact, and B refreshes the subscription.
+
+> the contact should be removed from B's group, but not deleted from
+  B's contacts. B should get a notification in the app.
+
+B edits some details of a contact.
+
+A edits a contact, and B refreshes the subscription.
+
+> A's *CHANGES* should be applied to B's representation of that
+  contact, and B should get a notification.
+
+*** Bidirectional A <-> B
+
+A publishes to B. B subscribes and publishes back to A. A subscribes.
+
+Expectation is that changes will propagate in both directions.
+
+A creates a share & sends out the URL/code. B subscribes, syncs down
+the data, creates contacts & group.
+
+B then declares a share & sends the URL/code to A. A subscribes, syncs
+the data, but this should not create anything (because they are
+already there) though it should build the xrefs between data elements
+and local entities.
+
+Make sure A does not create duplicates.
+
+*** Loop A -> B -> C -> A
+
+*** B subscribes, and then deletes the subscribed group!
+
+That should cancel the subscription, right? Or do we want the contacts
+to continue synchronizing even though the group does not.
+
+Must keep the record of the subscription around so that it can be
+re-established, e.g. if the group was deleted unintentionally.
+
+** TODO
+
+- (maybe) record an event in persistent history for every subscriber
+  sync (including attempts on sync for revoked shares?)

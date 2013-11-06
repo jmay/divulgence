@@ -1,27 +1,54 @@
 class Divulgence::Subscription
+  attr_reader :data, :publisher, :id
+
   def initialize(args)
-    @subscription_url = args.fetch(:url)
-    update(args.fetch(:payload))
+    @store = args.fetch(:store) { NullStore }
+
+    @id = args.fetch(:id)
+    @publisher = {
+      url: args.fetch(:url)
+    }
+    @data = args.fetch(:payload)
+
+    @store.insert({
+                    _id: id,
+                    publisher: publisher,
+                    created_at: Time.now
+                  })
+    update(data)
   end
 
-  def publisher
-    OpenStruct.new(url: @subscription_url)
+  def self.all(store)
+    store.find.map do |rec|
+      subscription = allocate
+      subscription.instance_variable_set(:id, rec[:_id])
+      subscription.instance_variable_set(:publisher, rec[:_publisher])
+      subscription.instance_variable_set(:data, rec[:_data])
+      subscription
+    end
   end
-  def object
-    @data
-  end
+
+  # def current_state
+  #   {
+  #     publisher: publisher,
+  #     object: object,
+  #     history: history
+  #   }
+  # end
+
   def history
     @history ||= []
   end
 
   def update(payload)
-    history << {ts: Time.now, payload: payload}
+    event = {ts: Time.now, payload: payload}
+    history << event
+    @store.update({_id: id},
+                  {
+                    '$set' => {object: payload},
+                    '$push' => {history: event}
+                  })
     @data = payload
-  end
-
-  # cancelling a subscription means to stop refreshing from the publisher
-  # we don't need to inform the publisher that there will be no further refresh attempts
-  def cancel!
   end
 
   def self.registry_url
@@ -51,8 +78,17 @@ class Divulgence::Subscription
     registry_get(url) do |response|
       if response.code == 200
         # sharespec = JSON.parse(response, { symbolize_names: true })
-        new(url: url, payload: response.body)
+        new(url: url, payload: response.body, id: 123)
       end
     end
+  end
+end
+
+class NullStore
+  def self.find
+    []
+  end
+  def self.method_missing(*args)
+    # no-op
   end
 end

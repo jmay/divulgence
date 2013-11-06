@@ -10,6 +10,12 @@ describe Divulgence::Subscription do
               ]
   }
 
+  context "null state" do
+    it "should have no subscriptions" do
+      Divulgence::Subscription.all(NullStore).should be_empty
+    end
+  end
+
   context "a new subscription" do
     before do
       registry_url = %r{#{ENV['OTHERBASE_REG']}/shares/ready/}
@@ -31,11 +37,11 @@ describe Divulgence::Subscription do
 
     it "should know the publisher" do
       @subscription.publisher.should_not be_nil
-      @subscription.publisher.url.should == @share_url
+      @subscription.publisher[:url].should == @share_url
     end
 
     it "should have a current payload" do
-      @subscription.object.should_not be_empty
+      @subscription.data.should_not be_empty
       @subscription.history.should_not be_empty
     end
   end

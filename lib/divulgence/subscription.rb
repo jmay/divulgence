@@ -28,20 +28,12 @@ class Divulgence::Subscription
     end
   end
 
-  # def current_state
-  #   {
-  #     publisher: publisher,
-  #     object: object,
-  #     history: history
-  #   }
-  # end
-
   def history
     @history ||= []
   end
 
   def update(payload)
-    event = {ts: Time.now, payload: payload}
+    event = {ts: Time.now, data: payload}
     history << event
     @store.update({_id: id},
                   {
@@ -51,34 +43,27 @@ class Divulgence::Subscription
     @data = payload
   end
 
-  def self.registry_url
+  def self.registry_base
     ENV['OTHERBASE_REG']
   end
 
-  def self.registry_get(url)
-    RestClient.get(url, {accept: :json}) do |response, request, result|
-      # $logger.info "REMOTE RESPONDED WITH #{response.code} #{response.class} #{response.body} RESULT #{result}"
-      yield response
-    end
-  end
-
-  def self.retrieve_disclosure(code)
-    url = "#{registry_url}/shares/ready/#{code}"
+  def self.remote_get(url)
     # $logger.info "GET #{url}"
-    registry_get(url) do |payload|
-      payload[:url]
+    RestClient.get(url, {accept: :json}) do |response, request, result|
+      if response.code == 200
+        yield response.body
+      else
+        raise
+      end
     end
-  # rescue Exception => e
-  #   $logger.info "REGISTRY BARF: #{e.}"
-  #   nil
   end
 
   def self.subscribe(code)
-    url = retrieve_disclosure(code)
-    registry_get(url) do |response|
-      if response.code == 200
-        # sharespec = JSON.parse(response, { symbolize_names: true })
-        new(url: url, payload: response.body, id: 123)
+    registry_url = "#{registry_base}/shares/ready/#{code}"
+    remote_get(registry_url) do |response|
+      share_url = response[:url]
+      remote_get(share_url) do |response|
+        new(url: share_url, payload: response, id: 123)
       end
     end
   end

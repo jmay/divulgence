@@ -18,9 +18,8 @@ describe Divulgence::Subscription do
 
   context "a new subscription" do
     before do
-      registry_url = %r{#{ENV['OTHERBASE_REG']}/shares/ready/}
       @share_url = "node.otherbase.dev/nodenodenode/dummy/dummy"
-      @stub1 = stub_request(:get, registry_url).to_return(body: {url: @share_url})
+      @stub1 = stub_request(:get, %r{/shares/ready/CODE}).to_return(body: {url: @share_url})
 
       @stub2 = stub_request(:get, @share_url).to_return(body: SharedData)
 
@@ -43,13 +42,13 @@ describe Divulgence::Subscription do
     it "should have a current payload" do
       @subscription.data.should_not be_empty
       @subscription.history.should_not be_empty
+      @subscription.history.first[:data].should == @subscription.data
     end
   end
 
   context "an invalid subscription code" do
     before do
-      url_re = %r{#{ENV['OTHERBASE_REG']}/shares/ready/}
-      @stub = stub_request(:get, url_re).to_return(status: 401)
+      @stub = stub_request(:get, %r{/shares/ready/BADCODE}).to_return(status: 401)
     end
 
     it "should raise" do
@@ -59,9 +58,8 @@ describe Divulgence::Subscription do
 
   context "a subscription to an unavailable share" do
     before do
-      registry_url = %r{#{ENV['OTHERBASE_REG']}/shares/ready/}
       share_url = "node.otherbase.dev/nodenodenode/dummy/dummy"
-      @stub1 = stub_request(:get, registry_url).to_return(body: {url: share_url})
+      @stub1 = stub_request(:get, %r{/shares/ready/GOODCODE}).to_return(body: {url: share_url})
 
       @stub2 = stub_request(:get, share_url).to_raise(StandardError)
     end

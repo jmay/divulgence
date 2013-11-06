@@ -7,8 +7,9 @@ unless Kernel.respond_to?(:require_relative)
 end
 
 %w(
-  share subscriber
+  share subscriber share_history
   subscription
+  store
   ).each do |f|
   require_relative "divulgence/#{f}"
 end

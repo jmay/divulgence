@@ -104,6 +104,13 @@ don't know whether it will work in the future, or even be
 reattempted. The app could create a placeholder for reattempts, but
 the gem will store no record of the failed attempt.
 
+*** How does publisher distinguish subscribers?
+
+Publisher should keep a record of each sync attempt, and that record
+should describe who was attempting to sync and when. So the publisher
+needs to give each subscriber a unique token that it must use when
+fetching.
+
 ** What can we ask about a share?
 
 Does a share have a name? No.

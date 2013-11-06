@@ -3,6 +3,7 @@ require "rspec/expectations"
 require 'webmock/rspec'
 require "json"
 require 'rest-client'
+require "moneta"
 
 require "logger"
 $logger = Logger.new(STDERR)

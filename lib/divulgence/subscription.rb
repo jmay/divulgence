@@ -2,7 +2,7 @@ class Divulgence::Subscription
   attr_reader :data, :publisher, :id
 
   def initialize(args)
-    @store = args.fetch(:store) { NullStore }
+    @store = args.fetch(:store) { Divulgence::NullStore }
 
     @id = args.fetch(:id)
     @publisher = {
@@ -89,14 +89,5 @@ class Divulgence::Subscription
         new(url: share_url, payload: response, id: 123)
       end
     end
-  end
-end
-
-class NullStore
-  def self.find
-    []
-  end
-  def self.method_missing(*args)
-    # no-op
   end
 end

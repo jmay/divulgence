@@ -22,7 +22,7 @@ describe Divulgence::Subscription do
 
   context "null state" do
     it "should have no subscriptions" do
-      Divulgence::Subscription.all(NullStore).should be_empty
+      Divulgence::Subscription.all(Divulgence::NullStore).should be_empty
     end
   end
 

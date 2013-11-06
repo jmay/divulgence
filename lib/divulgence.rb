@@ -7,7 +7,7 @@ unless Kernel.respond_to?(:require_relative)
 end
 
 %w(
-  share subscriber share_history
+  share
   subscription
   store
   ).each do |f|

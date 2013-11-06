@@ -9,7 +9,6 @@ describe Divulgence::Share do
     end
 
     it "should be idle" do
-      @share.should_not be_published
       @share.subscribers.should be_empty
       @share.history.should be_empty
     end

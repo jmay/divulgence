@@ -7,8 +7,7 @@ class Divulgence::Share
     store.insert({
                    _id: id,
                    created_at: Time.now,
-                   published: false,
-                   subscribers: {}
+                   active: false
                  })
   end
 
@@ -21,9 +20,14 @@ class Divulgence::Share
     end
   end
 
-  def published?
-    false
+  def to_h
+    {
+      _id: id,
+      created_at: @created_at,
+      active: @active
+    }
   end
+
   def subscribers
     store.find(_id: /^#{id}.subscribers./).map { |rec| OpenStruct.new(rec) }
   end
@@ -43,10 +47,6 @@ class Divulgence::Share
     store.insert(subscriber)
 
     OpenStruct.new(subscriber)
-  end
-
-  # revoking a share means that further refresh attempts will be refused
-  def revoke!
   end
 
   def subscriber_for_token(token)
@@ -89,16 +89,5 @@ class Divulgence::Share
                  })
 
     yield if block_given?
-  end
-
-  def self.registry_url
-    ENV['OTHERBASE_REG']
-  end
-
-  def self.registry_get(url)
-    RestClient.get(url, {accept: :json}) do |response, request, result|
-      # $logger.info "REMOTE RESPONDED WITH #{response.code} #{response.class} #{response.body} RESULT #{result}"
-      yield response
-    end
   end
 end

@@ -43,6 +43,29 @@ class Divulgence::Subscription
     @data = payload
   end
 
+  def refresh
+    self.class.remote_get(publisher[:url]) do |response|
+      update(response)
+    end
+  end
+
+  def entities
+    primary = {}
+    ents = [primary]
+    data.each do |k,v|
+      Array(v).each do |x|
+        if x.respond_to?(:fetch) && x[:id]
+          primary[k] ||= []
+          primary[k] << x[:id]
+          ents << x
+        else
+          primary[k] = x
+        end
+      end
+    end
+    ents
+  end
+
   def self.registry_base
     ENV['OTHERBASE_REG']
   end

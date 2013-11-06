@@ -76,6 +76,20 @@ will happen infrequently.
 The payload can contain multiple of these markers. If they are nested,
 then we have some sort of container relationship (group/contact).
 
+*** Who needs to know whether things have changed or not?
+
+Can subscriber ask the publisher "are there any changes"?
+
+No. Because the subscriber might have refreshed previously and then
+died, so not recorded changes. The publisher can't trust the
+subscriber's state, so the publisher can only say "here's what I have
+now, you go ahead and check it".
+
+The sharing gem should just manage the exchange of these
+representations, not identification of changes. We can transform the
+data into entities, but not tell what has been added or changed or
+removed. The application must do that.
+
 *** Why should the publisher insert the markers rather than the subscriber?
 
 The publisher might change attributes of the original data, and the

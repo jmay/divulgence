@@ -3,10 +3,20 @@ require "spec_helper"
 describe Divulgence::Subscription do
 
   SharedData = {
+    id: "Group1",
     name: "Friends",
     contacts: [
-               {name: {full: "Bob Brown"}, emails: [{label: "work", email: "bob@work.com"}]},
-               {name: {full: "Carol Cowing"}, emails: [{label: "work", email: "carolc@gmail.com"}]},
+               {id: "Contact1", name: {full: "Bob Brown"}, emails: [{label: "work", email: "bob@work.com"}]},
+               {id: "Contact2", name: {full: "Carol Cowing"}, emails: [{label: "work", email: "carolc@gmail.com"}]},
+              ]
+  }
+  RevisedData = {
+    id: "Group1",
+    name: "Friends",
+    contacts: [
+               {id: "Contact1", name: {full: "Robert Brown"}, emails: [{label: "work", email: "bob@work.com"}]},
+               {id: "Contact2", name: {full: "Carol Cowing"}, emails: [{label: "work", email: "carolc@gmail.com"}]},
+               {id: "Contact3", name: {full: "Donna Dolittle"}, emails: [{label: "work", email: "donnado@yahoo.com"}]},
               ]
   }
 
@@ -44,7 +54,50 @@ describe Divulgence::Subscription do
       @subscription.history.should_not be_empty
       @subscription.history.first[:data].should == @subscription.data
     end
-  end
+
+    it "should define objects" do
+      @subscription.entities.count.should == 3
+      entlist = [
+                 {id: "Group1", name: "Friends", contacts: ["Contact1", "Contact2"]},
+                 {id: "Contact1", name: {full: "Bob Brown"}, emails: [{label: "work", email: "bob@work.com"}]},
+                 {id: "Contact2", name: {full: "Carol Cowing"}, emails: [{label: "work", email: "carolc@gmail.com"}]}
+                ]
+      entlist.each do |ent|
+        @subscription.entities.should include(ent)
+      end
+    end
+
+    context "after refreshing unchanged" do
+      before do
+        @subscription.refresh
+      end
+
+      it "should have more history" do
+        @subscription.history.count.should == 2
+      end
+
+      it "should be unchanged" do
+        @subscription.entities.count.should == 3
+        @subscription.history.first[:data].should == @subscription.history.last[:data]
+      end
+    end
+
+    context "after refreshing with changes" do
+      before do
+        @stub2 = stub_request(:get, @share_url).to_return(body: RevisedData)
+        @subscription.refresh
+      end
+
+      it "should have more history" do
+        @subscription.history.count.should == 2
+      end
+
+      it "should have changes" do
+        @subscription.entities.count.should == 4
+        @subscription.history.first[:data].should_not == @subscription.history.last[:data]
+      end
+    end
+end
 
   context "an invalid subscription code" do
     before do

@@ -29,11 +29,13 @@ describe Divulgence::Subscription do
   context "a new subscription" do
     before do
       @share_url = "node.otherbase.dev/nodenodenode/dummy/dummy"
-      @stub1 = stub_request(:get, %r{/shares/ready/CODE}).to_return(body: {url: @share_url})
-      @stub2 = stub_request(:post, @share_url).with(body: {name: 'Susie Subscriber'}).to_return(body: {token: 'NewToken'})
+      @stub1 = stub_request(:get, %r{/shares/ready/CODE}).to_return(body: {url: @share_url}.to_json)
+      @stub2 = stub_request(:post, @share_url).with(body: {name: 'Susie Subscriber'}).to_return(body: {token: 'NewToken'}.to_json)
       @stub3 = stub_request(:get, "#{@share_url}/NewToken").to_return(body: SharedData.to_json)
 
-      @subscription = Divulgence.subscribe("CODE", {name: "Susie Subscriber"})
+      @subscription = Divulgence::Subscription.subscribe(store: Divulgence::MemoryStore.new,
+                                                         code: "CODE",
+                                                         peer: {name: "Susie Subscriber"})
       @subscription.refresh
     end
 
@@ -46,6 +48,7 @@ describe Divulgence::Subscription do
     it "should know the publisher" do
       @subscription.publisher.should_not be_nil
       @subscription.publisher[:url].should == @share_url
+      @subscription.publisher[:token].should == "NewToken"
     end
 
     it "should have a current payload" do

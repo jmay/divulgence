@@ -20,6 +20,6 @@ module Divulgence
   end
 
   def self.subscribe(code, peerdata)
-    Divulgence::Subscription.subscribe(code, peerdata)
+    Divulgence::Subscription.subscribe(code: code, peer: peerdata)
   end
 end

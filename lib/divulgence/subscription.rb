@@ -44,8 +44,7 @@ class Divulgence::Subscription
 
   def refresh
     self.class.remote_get("#{publisher[:url]}/#{publisher[:token]}") do |response|
-      payload = JSON.parse(response, symbolize_names: true)
-      update(payload)
+      update(response)
     end
   end
 
@@ -75,7 +74,7 @@ class Divulgence::Subscription
   def self.remote_get(url)
     RestClient.get(url, {accept: :json}) do |response, request, result|
       if response.code == 200
-        yield response.body
+        yield JSON.parse(response.body, symbolize_names: true)
       else
         raise
       end
@@ -85,19 +84,23 @@ class Divulgence::Subscription
   def self.remote_post(url, payload)
     RestClient.post(url, payload, {accept: :json}) do |response, request, result|
       if response.code == 200
-        yield response.body
+        yield JSON.parse(response.body, symbolize_names: true)
       else
         raise
       end
     end
   end
 
-  def self.subscribe(code, peerdata)
+  def self.subscribe(opts)
+    store = opts.fetch(:store) { Divulgence::NullStore }
+    code = opts.fetch(:code)
+    peerdata = opts.fetch(:peer)
+
     registry_url = "#{registry_base}/shares/ready/#{code}"
     remote_get(registry_url) do |response|
       share_url = response[:url]
       remote_post(share_url, peerdata) do |response|
-        new(url: share_url, token: response[:token], id: 123)
+        new(store: store, url: share_url, token: response[:token], id: SecureRandom.uuid)
       end
     end
   end

@@ -30,18 +30,17 @@ describe Divulgence::Subscription do
     before do
       @share_url = "node.otherbase.dev/nodenodenode/dummy/dummy"
       @stub1 = stub_request(:get, %r{/shares/ready/CODE}).to_return(body: {url: @share_url})
+      @stub2 = stub_request(:post, @share_url).with(body: {name: 'Susie Subscriber'}).to_return(body: {token: 'NewToken'})
+      @stub3 = stub_request(:get, "#{@share_url}/NewToken").to_return(body: SharedData.to_json)
 
-      @stub2 = stub_request(:get, @share_url).to_return(body: SharedData)
-
-      @subscription = Divulgence.subscribe("CODE")
+      @subscription = Divulgence.subscribe("CODE", {name: "Susie Subscriber"})
+      @subscription.refresh
     end
 
-    it "should talk to registry" do
-      @stub1.should have_been_requested
-    end
-
-    it "should talk to node" do
-      @stub2.should have_been_requested
+    it "should have corresponded with registry and node" do
+      @stub1.should have_been_requested # located publisher
+      @stub2.should have_been_requested # onboarded
+      @stub3.should have_been_requested # refreshed
     end
 
     it "should know the publisher" do
@@ -84,7 +83,7 @@ describe Divulgence::Subscription do
 
     context "after refreshing with changes" do
       before do
-        @stub2 = stub_request(:get, @share_url).to_return(body: RevisedData)
+        stub_request(:get, "#{@share_url}/NewToken").to_return(body: RevisedData.to_json)
         @subscription.refresh
       end
 

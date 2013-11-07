@@ -6,8 +6,7 @@ class Divulgence::Share
     @id = args.fetch(:id)
     store.insert({
                    _id: id,
-                   created_at: Time.now,
-                   active: false
+                   created_at: Time.now
                  })
   end
 
@@ -23,8 +22,7 @@ class Divulgence::Share
   def to_h
     {
       _id: id,
-      created_at: @created_at,
-      active: @active
+      created_at: @created_at
     }
   end
 

@@ -19,7 +19,7 @@ module Divulgence
     Divulgence::Share.new(args)
   end
 
-  def self.subscribe(code)
-    Divulgence::Subscription.subscribe(code)
+  def self.subscribe(code, peerdata)
+    Divulgence::Subscription.subscribe(code, peerdata)
   end
 end

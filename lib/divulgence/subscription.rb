@@ -6,16 +6,15 @@ class Divulgence::Subscription
 
     @id = args.fetch(:id)
     @publisher = {
-      url: args.fetch(:url)
+      url: args.fetch(:url),
+      token: args.fetch(:token)
     }
-    @data = args.fetch(:payload)
-
     @store.insert({
                     _id: id,
                     publisher: publisher,
                     created_at: Time.now
                   })
-    update(data)
+    # update(data)
   end
 
   def self.all(store)
@@ -44,12 +43,15 @@ class Divulgence::Subscription
   end
 
   def refresh
-    self.class.remote_get(publisher[:url]) do |response|
-      update(response)
+    self.class.remote_get("#{publisher[:url]}/#{publisher[:token]}") do |response|
+      payload = JSON.parse(response, symbolize_names: true)
+      update(payload)
     end
   end
 
   def entities
+    return [] unless data
+
     primary = {}
     ents = [primary]
     data.each do |k,v|
@@ -71,7 +73,6 @@ class Divulgence::Subscription
   end
 
   def self.remote_get(url)
-    # $logger.info "GET #{url}"
     RestClient.get(url, {accept: :json}) do |response, request, result|
       if response.code == 200
         yield response.body
@@ -81,12 +82,22 @@ class Divulgence::Subscription
     end
   end
 
-  def self.subscribe(code)
+  def self.remote_post(url, payload)
+    RestClient.post(url, payload, {accept: :json}) do |response, request, result|
+      if response.code == 200
+        yield response.body
+      else
+        raise
+      end
+    end
+  end
+
+  def self.subscribe(code, peerdata)
     registry_url = "#{registry_base}/shares/ready/#{code}"
     remote_get(registry_url) do |response|
       share_url = response[:url]
-      remote_get(share_url) do |response|
-        new(url: share_url, payload: response, id: 123)
+      remote_post(share_url, peerdata) do |response|
+        new(url: share_url, token: response[:token], id: 123)
       end
     end
   end

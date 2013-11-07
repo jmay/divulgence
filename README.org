@@ -151,17 +151,26 @@ All those previous publication URLs will remain valid?
 
 *** How to revoke a publish? So nobody else will be allowed to subscribe.
 
-
+The Web API for access to the sharing system is implemented in the
+application, not the gem. So revocation of a published share likewise
+belongs in the API. External identification of a share (public URL) is
+up to the app, so the app must register the share with the registry.
 
 ** subscribing
 
-=Divulgence.subscribe(url)=
+=Divulgence.subscribe(code, peerinfo)=
 
-Give it the URL of the share. This gem should
+Contact the registry and fetch the URL of the share with the specified
+code.
 
-=share.sync= or =share.refresh=
+*Onboarding* is to POST to that URL with information describing this
+subscriber (a hash of details that might be validated by the
+publisher, say requiring name & contact details). The publisher should
+respond with a token that can be used for subsequent refreshes.
 
-returns an instance of a share.
+=share.refresh=
+
+returns the shared data payload, to be interpreted by the application.
 
 *** how to protect against duplication?
 
@@ -174,9 +183,9 @@ just the registry?
 
 *** how to map elements in subscription payload to local entities?
 
-
-
-
+Gem can convert the payload to entities based on identifiers in the
+payload, but the app is responsible for mapping to local identifiers,
+storing the mapping, and identifying changes.
 
 ** Persistence
 

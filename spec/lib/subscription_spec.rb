@@ -58,18 +58,6 @@ describe Divulgence::Subscription do
       @subscription.history.first[:data].should == @subscription.data
     end
 
-    # it "should define objects" do
-    #   @subscription.entities.count.should == 3
-    #   entlist = [
-    #              {id: "Group1", name: "Friends", contacts: ["Contact1", "Contact2"]},
-    #              {id: "Contact1", name: {full: "Bob Brown"}, emails: [{label: "work", email: "bob@work.com"}]},
-    #              {id: "Contact2", name: {full: "Carol Cowing"}, emails: [{label: "work", email: "carolc@gmail.com"}]}
-    #             ]
-    #   entlist.each do |ent|
-    #     @subscription.entities.should include(ent)
-      # end
-    # end
-
     context "after refreshing" do
       before do
         stub_request(:get, "#{@share_url}/NewToken").to_return(body: RevisedData.to_json)

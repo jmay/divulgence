@@ -4,10 +4,16 @@ module Divulgence
       @store = []
     end
 
-    def find(args = {})
+    # NOTE: doesn't implement sorting
+
+    def find(criteria, options = {})
       @store.find_all do |rec|
-        args.all? { |k, v| v === rec[k] }
+        criteria.all? { |k, v| v === rec[k] }
       end
+    end
+
+    def find_one(criteria, options = {})
+      find(criteria, options = {}).last
     end
 
     def insert(data)

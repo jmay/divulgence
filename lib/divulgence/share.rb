@@ -61,7 +61,7 @@ class Divulgence::Share
   end
 
   def history
-    store.find(_id: /^#{id}.history./).map { |rec| OpenStruct.new(rec) }
+    store.find({_id: /^#{id}.history./}, {sort: {ts: -1}})
   end
 
   def to_hash

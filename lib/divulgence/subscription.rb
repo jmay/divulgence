@@ -1,5 +1,5 @@
 class Divulgence::Subscription
-  attr_reader :data, :publisher, :id
+  attr_reader :publisher, :id
 
   def initialize(args)
     @store = args.fetch(:store) { Divulgence::NullStore }
@@ -21,6 +21,7 @@ class Divulgence::Subscription
   def self.all(store)
     store.find.map do |rec|
       subscription = allocate
+      subscription.instance_variable_set(:@store, store)
       subscription.instance_variable_set(:@id, rec[:_id])
       subscription.instance_variable_set(:@publisher, rec[:_publisher])
       subscription.instance_variable_set(:@data, rec[:_data])
@@ -29,18 +30,26 @@ class Divulgence::Subscription
   end
 
   def history
-    @history ||= []
+    @store.find({_id: /^#{id}.history./}, {sort: {ts: -1}}).map { |rec| OpenStruct.new(rec) }
+  end
+
+  def latest
+    if rec = @store.find_one({_id: /^#{id}.history./}, {sort: {ts: -1}})
+      OpenStruct.new(rec)
+    end
   end
 
   def update(payload)
-    event = {ts: Time.now, data: payload}
-    history << event
-    @store.update({_id: id},
-                  {
-                    '$set' => {object: payload},
-                    '$push' => {history: event}
+    now = Time.now
+    @store.insert({
+                    _id: "#{id}.history.#{now.to_i}",
+                    ts: now,
+                    data: payload
                   })
-    @data = payload
+  end
+
+  def data
+    latest.data
   end
 
   def refresh
@@ -48,25 +57,6 @@ class Divulgence::Subscription
       update(response)
     end
   end
-
-  # def entities
-  #   return [] unless data
-
-  #   primary = {}
-  #   ents = [primary]
-  #   data.each do |k,v|
-  #     Array(v).each do |x|
-  #       if x.respond_to?(:fetch) && x[:id]
-  #         primary[k] ||= []
-  #         primary[k] << x[:id]
-  #         ents << x
-  #       else
-  #         primary[k] = x
-  #       end
-  #     end
-  #   end
-  #   ents
-  # end
 
   def self.registry_base
     ENV['OTHERBASE_REG']

@@ -30,7 +30,7 @@ describe Divulgence::Subscription do
     before do
       @share_url = "node.otherbase.dev/nodenodenode/dummy/dummy"
       @stub1 = stub_request(:get, %r{/shares/ready/CODE}).to_return(body: {url: @share_url}.to_json)
-      @stub2 = stub_request(:post, @share_url).with(body: {name: 'Susie Subscriber'}).to_return(body: {token: 'NewToken'}.to_json)
+      @stub2 = stub_request(:post, @share_url).with(body: {name: 'Susie Subscriber'}).to_return(body: {token: 'NewToken', peer: {name: 'Paul Publisher'}}.to_json)
       @stub3 = stub_request(:get, "#{@share_url}/NewToken").to_return(body: SharedData.to_json)
 
       @subscription = Divulgence::Subscription.subscribe(store: Divulgence::MemoryStore.new,
@@ -47,7 +47,8 @@ describe Divulgence::Subscription do
 
     it "should know the publisher" do
       @subscription.publisher.should_not be_nil
-      @subscription.publisher[:url].should == @share_url
+      @subscription.publisher[:url].should eq @share_url
+      @subscription.publisher[:peer].should eq({name: 'Paul Publisher'})
       @subscription.publisher[:token].should == "NewToken"
     end
 
@@ -57,34 +58,19 @@ describe Divulgence::Subscription do
       @subscription.history.first[:data].should == @subscription.data
     end
 
-    it "should define objects" do
-      @subscription.entities.count.should == 3
-      entlist = [
-                 {id: "Group1", name: "Friends", contacts: ["Contact1", "Contact2"]},
-                 {id: "Contact1", name: {full: "Bob Brown"}, emails: [{label: "work", email: "bob@work.com"}]},
-                 {id: "Contact2", name: {full: "Carol Cowing"}, emails: [{label: "work", email: "carolc@gmail.com"}]}
-                ]
-      entlist.each do |ent|
-        @subscription.entities.should include(ent)
-      end
-    end
+    # it "should define objects" do
+    #   @subscription.entities.count.should == 3
+    #   entlist = [
+    #              {id: "Group1", name: "Friends", contacts: ["Contact1", "Contact2"]},
+    #              {id: "Contact1", name: {full: "Bob Brown"}, emails: [{label: "work", email: "bob@work.com"}]},
+    #              {id: "Contact2", name: {full: "Carol Cowing"}, emails: [{label: "work", email: "carolc@gmail.com"}]}
+    #             ]
+    #   entlist.each do |ent|
+    #     @subscription.entities.should include(ent)
+      # end
+    # end
 
-    context "after refreshing unchanged" do
-      before do
-        @subscription.refresh
-      end
-
-      it "should have more history" do
-        @subscription.history.count.should == 2
-      end
-
-      it "should be unchanged" do
-        @subscription.entities.count.should == 3
-        @subscription.history.first[:data].should == @subscription.history.last[:data]
-      end
-    end
-
-    context "after refreshing with changes" do
+    context "after refreshing" do
       before do
         stub_request(:get, "#{@share_url}/NewToken").to_return(body: RevisedData.to_json)
         @subscription.refresh
@@ -94,9 +80,8 @@ describe Divulgence::Subscription do
         @subscription.history.count.should == 2
       end
 
-      it "should have changes" do
-        @subscription.entities.count.should == 4
-        @subscription.history.first[:data].should_not == @subscription.history.last[:data]
+      it "should have the new data" do
+        expect(@subscription.data).to eq(RevisedData)
       end
     end
 end

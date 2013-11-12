@@ -4,10 +4,11 @@ class Divulgence::Subscription
   def initialize(args)
     @store = args.fetch(:store) { Divulgence::NullStore }
 
-    @id = args.fetch(:id)
+    @id = args.fetch(:id) { SecureRandom.uuid }
     @publisher = {
       url: args.fetch(:url),
-      token: args.fetch(:token)
+      token: args.fetch(:token),
+      peer: args.fetch(:peer)
     }
     @store.insert({
                     _id: id,
@@ -20,9 +21,9 @@ class Divulgence::Subscription
   def self.all(store)
     store.find.map do |rec|
       subscription = allocate
-      subscription.instance_variable_set(:id, rec[:_id])
-      subscription.instance_variable_set(:publisher, rec[:_publisher])
-      subscription.instance_variable_set(:data, rec[:_data])
+      subscription.instance_variable_set(:@id, rec[:_id])
+      subscription.instance_variable_set(:@publisher, rec[:_publisher])
+      subscription.instance_variable_set(:@data, rec[:_data])
       subscription
     end
   end
@@ -48,24 +49,24 @@ class Divulgence::Subscription
     end
   end
 
-  def entities
-    return [] unless data
+  # def entities
+  #   return [] unless data
 
-    primary = {}
-    ents = [primary]
-    data.each do |k,v|
-      Array(v).each do |x|
-        if x.respond_to?(:fetch) && x[:id]
-          primary[k] ||= []
-          primary[k] << x[:id]
-          ents << x
-        else
-          primary[k] = x
-        end
-      end
-    end
-    ents
-  end
+  #   primary = {}
+  #   ents = [primary]
+  #   data.each do |k,v|
+  #     Array(v).each do |x|
+  #       if x.respond_to?(:fetch) && x[:id]
+  #         primary[k] ||= []
+  #         primary[k] << x[:id]
+  #         ents << x
+  #       else
+  #         primary[k] = x
+  #       end
+  #     end
+  #   end
+  #   ents
+  # end
 
   def self.registry_base
     ENV['OTHERBASE_REG']
@@ -100,7 +101,11 @@ class Divulgence::Subscription
     remote_get(registry_url) do |response|
       share_url = response[:url]
       remote_post(share_url, peerdata) do |response|
-        new(store: store, url: share_url, token: response[:token], id: SecureRandom.uuid)
+        new(store: store,
+            url: share_url,
+            token: response[:token],
+            peer: response[:peer]
+            )
       end
     end
   end

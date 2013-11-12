@@ -1,5 +1,5 @@
 class Divulgence::Subscription
-  attr_reader :publisher, :id
+  attr_reader :id, :publisher, :created_at
 
   def initialize(args)
     @store = args.fetch(:store) { Divulgence::NullStore }
@@ -15,16 +15,15 @@ class Divulgence::Subscription
                     publisher: publisher,
                     created_at: Time.now
                   })
-    # update(data)
   end
 
-  def self.all(store)
-    store.find.map do |rec|
+  def self.all(store, criteria = {})
+    store.find(criteria).map do |rec|
       subscription = allocate
       subscription.instance_variable_set(:@store, store)
-      subscription.instance_variable_set(:@id, rec[:_id])
-      subscription.instance_variable_set(:@publisher, rec[:_publisher])
-      subscription.instance_variable_set(:@data, rec[:_data])
+      rec.each do |k,v|
+        subscription.instance_variable_set("@#{k.to_s.gsub(/^_/, '')}".to_sym, v)
+      end
       subscription
     end
   end
@@ -39,6 +38,10 @@ class Divulgence::Subscription
     end
   end
 
+  def set(changes)
+    @store.update({_id: id}, changes)
+  end
+
   def update(payload)
     now = Time.now
     @store.insert({
@@ -46,6 +49,7 @@ class Divulgence::Subscription
                     ts: now,
                     data: payload
                   })
+    @created_at = now
   end
 
   def data

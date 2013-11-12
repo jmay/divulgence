@@ -27,13 +27,14 @@ describe Divulgence::Subscription do
   end
 
   context "a new subscription" do
-    before do
+    before(:all) do
       @share_url = "node.otherbase.dev/nodenodenode/dummy/dummy"
       @stub1 = stub_request(:get, %r{/shares/ready/CODE}).to_return(body: {url: @share_url}.to_json)
       @stub2 = stub_request(:post, @share_url).with(body: {name: 'Susie Subscriber'}).to_return(body: {token: 'NewToken', peer: {name: 'Paul Publisher'}}.to_json)
       @stub3 = stub_request(:get, "#{@share_url}/NewToken").to_return(body: SharedData.to_json)
 
-      @subscription = Divulgence::Subscription.subscribe(store: Divulgence::MemoryStore.new,
+      @store = Divulgence::MemoryStore.new
+      @subscription = Divulgence::Subscription.subscribe(store: @store,
                                                          code: "CODE",
                                                          peer: {name: "Susie Subscriber"})
       @subscription.refresh
@@ -43,6 +44,7 @@ describe Divulgence::Subscription do
       @stub1.should have_been_requested # located publisher
       @stub2.should have_been_requested # onboarded
       @stub3.should have_been_requested # refreshed
+      @subscription.created_at.should_not be_nil
     end
 
     it "should know the publisher" do
@@ -56,6 +58,13 @@ describe Divulgence::Subscription do
       @subscription.data.should_not be_empty
       @subscription.history.should_not be_empty
       @subscription.history.first[:data].should == @subscription.data
+    end
+
+    it "should support custom annotation" do
+      @subscription.set(color: "purple")
+      s = Divulgence::Subscription.all(@store, color: "purple").first
+      s.should_not be_nil
+      s.instance_variable_get(:@color).should == "purple"
     end
 
     context "after refreshing" do

@@ -60,6 +60,10 @@ describe Divulgence::Subscription do
       @subscription.history.first[:data].should == @subscription.data
     end
 
+    it "should appear in list of subscriptions" do
+      Divulgence::Subscription.all(@store).map(&:id).should == [@subscription.id]
+    end
+
     it "should support custom annotation" do
       @subscription.set(color: "purple")
       s = Divulgence::Subscription.all(@store, color: "purple").first
@@ -79,6 +83,10 @@ describe Divulgence::Subscription do
 
       it "should have the new data" do
         expect(@subscription.data).to eq(RevisedData)
+      end
+
+      it "should still be the only subscription" do
+        Divulgence::Subscription.all(@store).count.should == 1
       end
     end
 end

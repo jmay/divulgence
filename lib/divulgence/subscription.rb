@@ -18,13 +18,15 @@ class Divulgence::Subscription
   end
 
   def self.all(store, criteria = {})
-    store.find(criteria).map do |rec|
-      subscription = allocate
-      subscription.instance_variable_set(:@store, store)
-      rec.each do |k,v|
-        subscription.instance_variable_set("@#{k.to_s.gsub(/^_/, '')}".to_sym, v)
+    store.find(criteria).each_with_object([]) do |rec, memo|
+      if rec[:_id] !~ /\./
+        subscription = allocate
+        subscription.instance_variable_set(:@store, store)
+        rec.each do |k,v|
+          subscription.instance_variable_set("@#{k.to_s.gsub(/^_/, '')}".to_sym, v)
+        end
+        memo << subscription
       end
-      subscription
     end
   end
 
@@ -77,11 +79,11 @@ class Divulgence::Subscription
   end
 
   def self.remote_post(url, payload)
-    RestClient.post(url, payload, {accept: :json}) do |response, request, result|
+    RestClient.post(url, payload.to_json, {content_type: :json, accept: :json}) do |response, request, result|
       if response.code == 200
         yield JSON.parse(response.body, symbolize_names: true)
       else
-        raise
+        raise "remote node rejected subscription request: #{response.body}"
       end
     end
   end

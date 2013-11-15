@@ -49,7 +49,7 @@ class Divulgence::Share
 
   def subscriber_for_token(token)
     subscriber = subscribers.find { |s| s.token == token && s.active }
-    raise unless subscriber
+    raise SecurityError, "invalid token" unless subscriber
     subscriber
   end
 

@@ -3,7 +3,8 @@ require "spec_helper"
 describe Divulgence::Share do
   Divulgence.config do |config|
     config.share_store = Divulgence::MemoryStore.new
-    config.share_history_store = Divulgence::MemoryStore.new
+    config.history_store = Divulgence::MemoryStore.new
+    config.subscriber_store = Divulgence::MemoryStore.new
   end
 
   context "a fresh share" do
@@ -13,7 +14,7 @@ describe Divulgence::Share do
 
     it "should be idle" do
       share.subscribers.should be_empty
-      share.history.should be_empty
+      share.history.should be_none
     end
 
     it "should appear in collection" do
@@ -42,7 +43,7 @@ describe Divulgence::Share do
       end
 
       it "should have no activity" do
-        share.history.should be_empty
+        share.history.should be_none
       end
 
       context "after syncing" do

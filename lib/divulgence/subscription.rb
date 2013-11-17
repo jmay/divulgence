@@ -28,11 +28,7 @@ class Divulgence::Subscription
   end
 
   def history
-    Enumerator.new do |yielder|
-      store.find({obj: 'history', subscription_id: id}, {sort: {ts: -1}}).each do |rec|
-        yielder.yield OpenStruct.new(rec)
-      end
-    end
+    Divulgence::History.find(pulled: id)
   end
 
   def latest
@@ -45,13 +41,7 @@ class Divulgence::Subscription
 
   def update(payload)
     now = Time.now
-    store.insert({
-                   obj: 'history',
-                   subscription_id: id,
-                   ts: now,
-                   data: payload
-                 })
-    set(data: payload, updated_at: now)
+    Divulgence::History.new(pulled: id, data: payload)
     @data = payload
   end
 

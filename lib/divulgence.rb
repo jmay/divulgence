@@ -9,6 +9,7 @@ end
 %w(
   share
   subscription
+  subscriber history
   store
   ).each do |f|
   require_relative "divulgence/#{f}"

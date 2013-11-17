@@ -58,7 +58,7 @@ describe Divulgence::Subscription do
     it "should have a current payload" do
       @subscription.data.should_not be_empty
       @subscription.history.to_a.should_not be_empty
-      @subscription.history.first[:data].should == @subscription.data
+      @subscription.history.first.data.should == @subscription.data
     end
 
     it "should appear in list of subscriptions" do

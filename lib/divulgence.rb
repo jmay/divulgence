@@ -19,7 +19,21 @@ module Divulgence
     Divulgence::Share.new(args)
   end
 
-  def self.subscribe(code, peerdata)
-    Divulgence::Subscription.subscribe(code: code, peer: peerdata)
+  def self.shares
+    Divulgence::Share.all(config.share_store)
+  end
+
+  def self.subscriptions(criteria = {})
+    Divulgence::Subscription.all(config.subscription_store, criteria)
+  end
+
+  def self.subscribe(args = {})
+    Divulgence::Subscription.subscribe(args)
+  end
+
+  def self.config
+    @@config ||= OpenStruct.new
+    yield @@config if block_given?
+    @@config
   end
 end

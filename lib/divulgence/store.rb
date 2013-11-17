@@ -6,14 +6,14 @@ module Divulgence
 
     # NOTE: doesn't implement sorting
 
-    def find(criteria, options = {})
+    def find(criteria = {}, options = {})
       @store.find_all do |rec|
-        criteria.all? { |k, v| v === rec[k] }
+        criteria.all? { |k, v| v == rec[k] }
       end
     end
 
     def find_one(criteria, options = {})
-      find(criteria, options = {}).last
+      find(criteria, options = {}).first
     end
 
     def insert(data)
@@ -22,7 +22,7 @@ module Divulgence
 
     def update(match, data)
       find(match).each do |rec|
-        rec.replace(data)
+        rec.replace(rec.merge(data))
       end
     end
   end

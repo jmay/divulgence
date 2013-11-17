@@ -1,40 +1,43 @@
 class Divulgence::Share
-  attr_reader :id, :store
+  attr_reader :id, :data
 
-  def initialize(args)
-    @store = args.fetch(:store) { Divulgence::NullStore }
-    @id = args.fetch(:id)
+  def initialize(customdata = {})
+    @id = SecureRandom.uuid
+    @data = customdata
     store.insert({
-                   _id: id,
-                   created_at: Time.now
+                   obj: 'share',
+                   id: @id,
+                   created_at: Time.now,
+                   data: @data
                  })
   end
 
   def self.all(store)
-    store.find.map do |rec|
+    store.find(obj: 'share').map do |rec|
       share = allocate
       rec.each do |k,v|
-        share.instance_variable_set(k, rec[k])
+        share.instance_variable_set("@#{k}", rec[k])
       end
+      share
     end
   end
 
-  def to_h
-    {
-      _id: id,
-      created_at: @created_at
-    }
+  def subscribers(criteria = {})
+    store.find(criteria.merge(obj: 'subscriber', share_id: id)).map { |rec| OpenStruct.new(rec) }
   end
 
-  def subscribers
-    store.find(_id: /^#{id}.subscribers./).map { |rec| OpenStruct.new(rec) }
+  def subscriber(criteria = {})
+    if rec = store.find_one(criteria.merge(obj: 'subscriber', share_id: id))
+      OpenStruct.new(rec)
+    end
   end
 
   def onboard(peerdata)
     token = SecureRandom.uuid
 
-    subscriber = {
-      _id: "#{id}.subscribers.#{token}",
+    subscriber_data = {
+      obj: 'subscriber',
+      share_id: id,
       token: token,
       peer: peerdata,
       active: true,
@@ -42,50 +45,46 @@ class Divulgence::Share
       last_sync_ts: nil
     }
 
-    store.insert(subscriber)
+    store.insert(subscriber_data)
 
-    OpenStruct.new(subscriber)
+    OpenStruct.new(subscriber_data)
   end
 
   def subscriber_for_token(token)
-    subscriber = subscribers.find { |s| s.token == token && s.active }
-    raise SecurityError, "invalid token" unless subscriber
-    subscriber
+    this_guy = subscriber(token: token, active: true)
+    raise SecurityError, "invalid token" unless this_guy
+    this_guy
   end
 
   def reject(token)
     subscriber = subscriber_for_token(token)
 
-    subscriber.active = false
-    store.update({_id: subscriber._id}, subscriber.to_h)
+    store.update({obj: 'subscriber', share_id: id, token: token}, {active: false})
   end
 
   def history
-    store.find({_id: /^#{id}.history./}, {sort: {ts: -1}})
-  end
-
-  def to_hash
-    {
-      _id: id,
-      created_at: created_at,
-      published: published?,
-      subscribers: subscribers.map(&:to_hash)
-    }
+    store.find({obj: 'history', share_id: id}, {sort: {ts: -1}})
   end
 
   def refresh(token)
     subscriber = subscriber_for_token(token)
 
     now = Time.now
-    subscriber.last_sync_ts = now
-    store.update({_id: subscriber._id}, subscriber.to_h)
+    store.update({obj: 'subscriber', share_id: id, token: token}, {last_sync_ts: now})
 
     store.insert({
-                   _id: "#{id}.history.#{token}.#{now.to_i}",
+                   obj: 'history',
+                   share_id: id,
                    token: token,
                    ts: now
                  })
 
     yield if block_given?
+  end
+
+  private
+
+  def store
+    Divulgence.config.share_store
   end
 end

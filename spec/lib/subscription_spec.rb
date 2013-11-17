@@ -1,6 +1,9 @@
 require "spec_helper"
 
 describe Divulgence::Subscription do
+  Divulgence.config do |config|
+    config.subscription_store = Divulgence::MemoryStore.new
+  end
 
   SharedData = {
     id: "Group1",
@@ -22,7 +25,7 @@ describe Divulgence::Subscription do
 
   context "null state" do
     it "should have no subscriptions" do
-      Divulgence::Subscription.all(Divulgence::NullStore).should be_empty
+      Divulgence.subscriptions.should be_empty
     end
   end
 
@@ -33,10 +36,8 @@ describe Divulgence::Subscription do
       @stub2 = stub_request(:post, @share_url).with(body: {name: 'Susie Subscriber'}).to_return(body: {token: 'NewToken', peer: {name: 'Paul Publisher'}}.to_json)
       @stub3 = stub_request(:get, "#{@share_url}/NewToken").to_return(body: SharedData.to_json)
 
-      @store = Divulgence::MemoryStore.new
-      @subscription = Divulgence::Subscription.subscribe(store: @store,
-                                                         code: "CODE",
-                                                         peer: {name: "Susie Subscriber"})
+      @subscription = Divulgence.subscribe(code: "CODE",
+                                           peer: {name: "Susie Subscriber"})
       @subscription.refresh
     end
 
@@ -56,17 +57,22 @@ describe Divulgence::Subscription do
 
     it "should have a current payload" do
       @subscription.data.should_not be_empty
-      @subscription.history.should_not be_empty
+      @subscription.history.to_a.should_not be_empty
       @subscription.history.first[:data].should == @subscription.data
     end
 
     it "should appear in list of subscriptions" do
-      Divulgence::Subscription.all(@store).map(&:id).should == [@subscription.id]
+      sublist = Divulgence.subscriptions
+      sublist.map(&:id).should == [@subscription.id]
+      expected_summary = {id: @subscription.id, last_update_ts: Time.now, publisher: {name: 'Paul Publisher'}}
+      sublist.first.summary[:id].should == expected_summary[:id]
+      sublist.first.summary[:publisher].should == expected_summary[:publisher]
+      sublist.first.summary[:last_update_ts].to_s.should == expected_summary[:last_update_ts].to_s
     end
 
     it "should support custom annotation" do
       @subscription.set(color: "purple")
-      s = Divulgence::Subscription.all(@store, color: "purple").first
+      s = Divulgence.subscriptions(color: "purple").first
       s.should_not be_nil
       s.instance_variable_get(:@color).should == "purple"
     end
@@ -86,7 +92,7 @@ describe Divulgence::Subscription do
       end
 
       it "should still be the only subscription" do
-        Divulgence::Subscription.all(@store).count.should == 1
+        Divulgence.subscriptions.count.should == 1
       end
     end
 end

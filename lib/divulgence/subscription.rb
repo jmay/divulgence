@@ -1,67 +1,72 @@
 class Divulgence::Subscription
-  attr_reader :id, :publisher, :created_at
+  attr_reader :id, :publisher, :created_at, :data
 
   def initialize(args)
-    @store = args.fetch(:store) { Divulgence::NullStore }
-
     @id = args.fetch(:id) { SecureRandom.uuid }
     @publisher = {
       url: args.fetch(:url),
       token: args.fetch(:token),
       peer: args.fetch(:peer)
     }
-    @store.insert({
-                    _id: id,
-                    publisher: publisher,
-                    created_at: Time.now
-                  })
+    store.insert({
+                   obj: 'subscription',
+                   id: id,
+                   publisher: publisher,
+                   created_at: Time.now
+                 })
+    @created_at = Time.now
   end
 
   def self.all(store, criteria = {})
-    store.find(criteria).each_with_object([]) do |rec, memo|
-      if rec[:_id] !~ /\./
-        subscription = allocate
-        subscription.instance_variable_set(:@store, store)
-        rec.each do |k,v|
-          subscription.instance_variable_set("@#{k.to_s.gsub(/^_/, '')}".to_sym, v)
-        end
-        memo << subscription
+    store.find(criteria.merge(obj: 'subscription')).each_with_object([]) do |rec, memo|
+      subscription = allocate
+      rec.each do |k,v|
+        subscription.instance_variable_set("@#{k}", v)
       end
+      memo << subscription
     end
   end
 
   def history
-    @store.find({_id: /^#{id}.history./}, {sort: {ts: -1}}).map { |rec| OpenStruct.new(rec) }
-  end
-
-  def latest
-    if rec = @store.find_one({_id: /^#{id}.history./}, {sort: {ts: -1}})
-      OpenStruct.new(rec)
+    Enumerator.new do |yielder|
+      store.find({obj: 'history', subscription_id: id}, {sort: {ts: -1}}).each do |rec|
+        yielder.yield OpenStruct.new(rec)
+      end
     end
   end
 
+  def latest
+    history.first
+  end
+
   def set(changes)
-    @store.update({_id: id}, changes)
+    store.update({obj: 'subscription', id: id}, changes)
   end
 
   def update(payload)
     now = Time.now
-    @store.insert({
-                    _id: "#{id}.history.#{now.to_i}",
-                    ts: now,
-                    data: payload
-                  })
-    @created_at = now
-  end
-
-  def data
-    latest.data
+    store.insert({
+                   obj: 'history',
+                   subscription_id: id,
+                   ts: now,
+                   data: payload
+                 })
+    set(data: payload, updated_at: now)
+    @data = payload
   end
 
   def refresh
     self.class.remote_get("#{publisher[:url]}/#{publisher[:token]}") do |response|
       update(response)
     end
+  end
+
+  def summary
+    {
+      id: id,
+      publisher: publisher[:peer],
+      last_update_ts: latest.ts
+    }
   end
 
   def self.registry_base
@@ -83,13 +88,12 @@ class Divulgence::Subscription
       if response.code == 200
         yield JSON.parse(response.body, symbolize_names: true)
       else
-        raise "remote node rejected subscription request: #{response.body}"
+        raise "remote node rejected request: #{response.body}"
       end
     end
   end
 
   def self.subscribe(opts)
-    store = opts.fetch(:store) { Divulgence::NullStore }
     code = opts.fetch(:code)
     peerdata = opts.fetch(:peer)
 
@@ -97,12 +101,17 @@ class Divulgence::Subscription
     remote_get(registry_url) do |response|
       share_url = response[:url]
       remote_post(share_url, peerdata) do |response|
-        new(store: store,
-            url: share_url,
+        new(url: share_url,
             token: response[:token],
             peer: response[:peer]
             )
       end
     end
+  end
+
+  private
+
+  def store
+    Divulgence.config.subscription_store
   end
 end

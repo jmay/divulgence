@@ -41,13 +41,13 @@ class Divulgence::Share
   end
 
   def history
-    Divulgence::History.find(refreshed: id)
+    Divulgence::History.find(pushed: id)
   end
 
   def refresh(token)
     now = Time.now
     subscriber_for_token(token).ping(now)
-    Divulgence::History.new(refreshed: id, token: token, ts: now)
+    Divulgence::History.new(pushed: id, token: token, ts: now)
 
     yield if block_given?
   end

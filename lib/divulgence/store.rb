@@ -7,8 +7,14 @@ module Divulgence
     # NOTE: doesn't implement sorting
 
     def find(criteria = {}, options = {})
-      @store.find_all do |rec|
+      matches = @store.find_all do |rec|
         criteria.all? { |k, v| v == rec[k] }
+      end
+      if sorting = options[:sort]
+        k = sorting.keys.first
+        matches.sort_by { |m| m[k] }.reverse
+      else
+        matches
       end
     end
 

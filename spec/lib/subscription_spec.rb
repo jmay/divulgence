@@ -3,6 +3,7 @@ require "spec_helper"
 describe Divulgence::Subscription do
   Divulgence.config do |config|
     config.subscription_store = Divulgence::MemoryStore.new
+    config.history_store = Divulgence::MemoryStore.new
   end
 
   SharedData = {
@@ -72,9 +73,11 @@ describe Divulgence::Subscription do
 
     it "should support custom annotation" do
       @subscription.set(color: "purple")
+      @old_pub = @subscription.publisher
       s = Divulgence.subscriptions(color: "purple").first
       s.should_not be_nil
       s.instance_variable_get(:@color).should == "purple"
+      s.publisher.should == @old_pub
     end
 
     context "after refreshing" do

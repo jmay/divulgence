@@ -15,17 +15,19 @@ end
   require_relative "divulgence/#{f}"
 end
 
+require "ostruct"
+
 module Divulgence
   def self.share(args)
     Divulgence::Share.new(args)
   end
 
-  def self.shares
-    Divulgence::Share.all(config.share_store)
+  def self.shares(criteria = {})
+    Divulgence::Share.find(criteria)
   end
 
   def self.subscriptions(criteria = {})
-    Divulgence::Subscription.all(config.subscription_store, criteria)
+    Divulgence::Subscription.all(criteria)
   end
 
   def self.subscribe(args = {})

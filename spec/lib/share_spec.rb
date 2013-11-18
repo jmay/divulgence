@@ -7,6 +7,12 @@ describe Divulgence::Share do
     config.subscriber_store = Divulgence::MemoryStore.new
   end
 
+  describe "null state" do
+    it "should have no shares" do
+      Divulgence.shares.should be_empty
+    end
+  end
+
   context "a fresh share" do
     let(:share) do
       Divulgence.share(info: 'stuff here')
@@ -74,6 +80,28 @@ describe Divulgence::Share do
           expect {share.refresh(peer1.token)}.to raise_error
         end
       end
+    end
+  end
+
+  describe "share with custom data" do
+    before(:all) do
+      Divulgence::Share.new(id: "MYSHARE", color: 'purple')
+    end
+
+    it "should be findable by id" do
+      sh = Divulgence::Share.find(id: "MYSHARE").first
+      sh.id.should == 'MYSHARE'
+      sh.data[:color].should == 'purple'
+    end
+
+    it "should be findable by attribute" do
+      Divulgence::Share.find(data: {color: 'purple'}).count.should == 1
+    end
+
+    it "can update custom data" do
+      sh = Divulgence::Share.find(id: "MYSHARE").first
+      sh.set(color: 'green')
+      sh.data[:color].should == 'green'
     end
   end
 end

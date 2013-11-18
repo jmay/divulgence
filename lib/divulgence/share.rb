@@ -1,19 +1,18 @@
 class Divulgence::Share
-  attr_reader :id, :data
+  attr_reader :id, :data, :created_at
 
-  def initialize(customdata = {})
-    @id = SecureRandom.uuid
-    @data = customdata
-    store.insert({
-                   obj: 'share',
-                   id: @id,
-                   created_at: Time.now,
-                   data: @data
-                 })
+  def initialize(params = {})
+    @id = params.fetch(:id) { SecureRandom.uuid }
+    @data = params.reject { |k,v| k == :id }
+    @created_at = Time.now
+    store.insert(id: @id,
+                 created_at: @created_at,
+                 data: @data
+                 )
   end
 
-  def self.all(store)
-    store.find(obj: 'share').map do |rec|
+  def self.find(criteria = {})
+    store.find(criteria).map do |rec|
       share = allocate
       rec.each do |k,v|
         share.instance_variable_set("@#{k}", rec[k])
@@ -52,9 +51,13 @@ class Divulgence::Share
     yield if block_given?
   end
 
+  def set(changes)
+    store.update({id: id}, {id: id, created_at: created_at, data: changes})
+    @data = changes
+  end
+
   private
 
-  def store
-    Divulgence.config.share_store
-  end
+  def self.store; Divulgence.config.share_store; end
+  def store; self.class.store; end
 end

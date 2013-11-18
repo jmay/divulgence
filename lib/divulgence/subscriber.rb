@@ -6,7 +6,7 @@ class Divulgence::Subscriber
                        active: true,
                        last_sync_ts: nil
                        )
-    store.insert(@data)
+    self.class.store.insert(@data)
   end
 
   def self.find(criteria)
@@ -18,12 +18,12 @@ class Divulgence::Subscriber
   end
 
   def reject!
-    store.update(@data, {active: false})
+    self.class.store.update(@data, {active: false})
     @data[:active] = false
   end
 
   def ping(ts = Time.now)
-    store.update(@data, {last_sync_ts: ts})
+    self.class.store.update(@data, {last_sync_ts: ts})
     @data[:last_sync_ts] = ts
   end
 
@@ -35,15 +35,8 @@ class Divulgence::Subscriber
     @data.has_key?(meth) ? @data[meth] : super
   end
 
-  def to_s
-    "SUBSCRIBER: #{@data}"
-  end
-
   private
 
-  def store
-    self.class.store
-  end
   def self.store
     Divulgence.config.subscriber_store
   end

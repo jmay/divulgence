@@ -1,7 +1,7 @@
 class Divulgence::History
   def initialize(args)
     @data = args.merge(ts: Time.now)
-    store.insert(@data)
+    self.class.store.insert(@data)
   end
 
   # always retrieve history most-recent-first
@@ -21,9 +21,6 @@ class Divulgence::History
 
   private
 
-  def store
-    self.class.store
-  end
   def self.store
     Divulgence.config.history_store
   end

@@ -1,5 +1,5 @@
 class Divulgence::Subscription
-  attr_reader :id, :publisher, :created_at, :data
+  attr_reader :id, :publisher, :created_at
 
   def initialize(args)
     @id = args.fetch(:id) { SecureRandom.uuid }
@@ -8,22 +8,20 @@ class Divulgence::Subscription
       token: args.fetch(:token),
       peer: args.fetch(:peer)
     }
-    store.insert({
-                   obj: 'subscription',
-                   id: id,
-                   publisher: publisher,
-                   created_at: Time.now
-                 })
+    store.insert(id: id,
+                 publisher: publisher,
+                 created_at: Time.now
+                 )
     @created_at = Time.now
   end
 
-  def self.all(store, criteria = {})
-    store.find(criteria.merge(obj: 'subscription')).each_with_object([]) do |rec, memo|
+  def self.all(criteria = {})
+    store.find(criteria).map do |rec|
       subscription = allocate
       rec.each do |k,v|
         subscription.instance_variable_set("@#{k}", v)
       end
-      memo << subscription
+      subscription
     end
   end
 
@@ -35,14 +33,17 @@ class Divulgence::Subscription
     history.first
   end
 
+  def data
+    latest && latest.data
+  end
+
   def set(changes)
-    store.update({obj: 'subscription', id: id}, changes)
+    store.update({id: id}, changes.merge(id: id, publisher: publisher, created_at: created_at))
   end
 
   def update(payload)
     now = Time.now
     Divulgence::History.new(pulled: id, data: payload)
-    @data = payload
   end
 
   def refresh
@@ -101,7 +102,6 @@ class Divulgence::Subscription
 
   private
 
-  def store
-    Divulgence.config.subscription_store
-  end
+  def self.store; Divulgence.config.subscription_store; end
+  def store; self.class.store; end
 end

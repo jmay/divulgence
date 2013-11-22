@@ -7,6 +7,7 @@ unless Kernel.respond_to?(:require_relative)
 end
 
 %w(
+  version
   share
   subscription
   subscriber history

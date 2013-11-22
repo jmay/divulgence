@@ -18,12 +18,12 @@ class Divulgence::Subscriber
   end
 
   def reject!
-    self.class.store.update(@data, {active: false})
+    self.class.store.update(@data, @data.merge(active: false))
     @data[:active] = false
   end
 
   def ping(ts = Time.now)
-    self.class.store.update(@data, {last_sync_ts: ts})
+    self.class.store.update(@data, @data.merge(last_sync_ts: ts))
     @data[:last_sync_ts] = ts
   end
 

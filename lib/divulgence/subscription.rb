@@ -69,7 +69,7 @@ class Divulgence::Subscription
       if response.code == 200
         yield JSON.parse(response.body, symbolize_names: true)
       else
-        raise
+        raise ArgumentError, "Registry rejected #{url} with #{response.code}: #{response.body}"
       end
     end
   end
@@ -79,7 +79,7 @@ class Divulgence::Subscription
       if response.code == 200
         yield JSON.parse(response.body, symbolize_names: true)
       else
-        raise "remote node rejected request: #{response.body}"
+        raise "remote node rejected request: #{response.code} #{response.body}"
       end
     end
   end

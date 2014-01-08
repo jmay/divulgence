@@ -1,9 +1,11 @@
 require "spec_helper"
 
 describe Divulgence::Subscription do
-  Divulgence.config do |config|
-    config.subscription_store = Divulgence::MemoryStore.new
-    config.history_store = Divulgence::MemoryStore.new
+  before(:all) do
+    @context = Divulgence::Context.new do |config|
+      config.subscription_store = Divulgence::MemoryStore.new
+      config.history_store = Divulgence::MemoryStore.new
+    end
   end
 
   SharedData = {
@@ -26,7 +28,7 @@ describe Divulgence::Subscription do
 
   context "null state" do
     it "should have no subscriptions" do
-      Divulgence.subscriptions.should be_empty
+      @context.subscriptions.should be_empty
     end
   end
 
@@ -37,7 +39,7 @@ describe Divulgence::Subscription do
       @stub2 = stub_request(:post, @share_url).with(body: {name: 'Susie Subscriber'}).to_return(body: {token: 'NewToken', peer: {name: 'Paul Publisher'}}.to_json)
       @stub3 = stub_request(:get, "#{@share_url}/NewToken").to_return(body: SharedData.to_json)
 
-      @subscription = Divulgence.subscribe(code: "CODE",
+      @subscription = @context.subscribe(code: "CODE",
                                            peer: {name: "Susie Subscriber"})
       @subscription.refresh
     end
@@ -63,7 +65,7 @@ describe Divulgence::Subscription do
     end
 
     it "should appear in list of subscriptions" do
-      sublist = Divulgence.subscriptions
+      sublist = @context.subscriptions
       sublist.map(&:id).should == [@subscription.id]
       expected_summary = {id: @subscription.id, last_update_ts: Time.now, publisher: {name: 'Paul Publisher'}}
       sublist.first.summary[:id].should == expected_summary[:id]
@@ -74,7 +76,7 @@ describe Divulgence::Subscription do
     it "should support custom annotation" do
       @subscription.set(color: "purple")
       @old_pub = @subscription.publisher
-      s = Divulgence.subscriptions(color: "purple").first
+      s = @context.subscriptions(color: "purple").first
       s.should_not be_nil
       s.instance_variable_get(:@color).should == "purple"
       s.publisher.should == @old_pub
@@ -95,7 +97,7 @@ describe Divulgence::Subscription do
       end
 
       it "should still be the only subscription" do
-        Divulgence.subscriptions.count.should == 1
+        @context.subscriptions.count.should == 1
       end
     end
 end
@@ -106,7 +108,7 @@ end
     end
 
     it "should raise" do
-      expect { Divulgence.subscribe("BADCODE") }.to raise_error
+      expect { @context.subscribe("BADCODE") }.to raise_error
     end
   end
 
@@ -119,7 +121,7 @@ end
     end
 
     it "should fail" do
-      expect { Divulgence.subscribe("GOODCODE") }.to raise_error(StandardError)
+      expect { @context.subscribe("GOODCODE") }.to raise_error(StandardError)
     end
   end
 end

@@ -1,7 +1,8 @@
 class Divulgence::Share
-  attr_reader :id, :data, :created_at
+  attr_reader :id, :data, :created_at, :context
 
   def initialize(params = {})
+    @context = params.delete(:context)
     @id = params.fetch(:id) { SecureRandom.uuid }
     @data = params.reject { |k,v| k == :id }
     @created_at = Time.now
@@ -11,9 +12,10 @@ class Divulgence::Share
                  )
   end
 
-  def self.find(criteria = {})
-    store.find(criteria).map do |rec|
+  def self.find(context, criteria = {})
+    context.share_store.find(criteria).map do |rec|
       share = allocate
+      share.instance_variable_set("@context", context)
       rec.each do |k,v|
         share.instance_variable_set("@#{k}", rec[k])
       end
@@ -22,11 +24,11 @@ class Divulgence::Share
   end
 
   def subscribers(criteria = {})
-    Divulgence::Subscriber.find(criteria.merge(share_id: id))
+    Divulgence::Subscriber.find(context.subscriber_store, criteria.merge(share_id: id))
   end
 
   def onboard(peerdata)
-    Divulgence::Subscriber.new(share_id: id, peer: peerdata)
+    Divulgence::Subscriber.new(context.subscriber_store, {share_id: id, peer: peerdata})
   end
 
   def subscriber_for_token(token)
@@ -40,13 +42,13 @@ class Divulgence::Share
   end
 
   def history
-    Divulgence::History.find(pushed: id)
+    Divulgence::History.find(context.history_store, pushed: id)
   end
 
   def refresh(token)
     now = Time.now
     subscriber_for_token(token).ping(now)
-    Divulgence::History.new(pushed: id, token: token, ts: now)
+    Divulgence::History.new(context.history_store, {pushed: id, token: token, ts: now})
 
     yield if block_given?
   end
@@ -56,8 +58,8 @@ class Divulgence::Share
     @data = changes
   end
 
-  private
+  # private
 
-  def self.store; Divulgence.config.share_store; end
-  def store; self.class.store; end
+  # def self.store; Divulgence.config.share_store; end
+  def store; context.share_store; end
 end

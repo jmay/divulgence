@@ -1,7 +1,8 @@
 class Divulgence::Subscription
-  attr_reader :id, :publisher, :created_at
+  attr_reader :id, :publisher, :created_at, :context
 
   def initialize(args)
+    @context = args.delete(:context)
     @id = args.fetch(:id) { SecureRandom.uuid }
     @publisher = {
       url: args.fetch(:url),
@@ -15,9 +16,10 @@ class Divulgence::Subscription
     @created_at = Time.now
   end
 
-  def self.all(criteria = {})
-    store.find(criteria).map do |rec|
+  def self.find(context, criteria = {})
+    context.subscription_store.find(criteria).map do |rec|
       subscription = allocate
+      subscription.instance_variable_set(:@context, context)
       rec.each do |k,v|
         subscription.instance_variable_set("@#{k}", v)
       end
@@ -26,7 +28,7 @@ class Divulgence::Subscription
   end
 
   def history
-    Divulgence::History.find(pulled: id)
+    Divulgence::History.find(context.history_store, pulled: id)
   end
 
   def latest
@@ -43,7 +45,7 @@ class Divulgence::Subscription
 
   def update(payload)
     now = Time.now
-    Divulgence::History.new(pulled: id, data: payload)
+    Divulgence::History.new(context.history_store, {pulled: id, data: payload})
   end
 
   def refresh
@@ -84,7 +86,7 @@ class Divulgence::Subscription
     end
   end
 
-  def self.subscribe(opts)
+  def self.subscribe(context, opts)
     code = opts.fetch(:code)
     peerdata = opts.fetch(:peer)
 
@@ -92,16 +94,17 @@ class Divulgence::Subscription
     remote_get(registry_url) do |response|
       share_url = response[:url]
       remote_post(share_url, peerdata) do |response|
-        new(url: share_url,
-            token: response[:token],
-            peer: response[:peer]
-            )
+        new(context: context,
+          url: share_url,
+          token: response[:token],
+          peer: response[:peer]
+          )
       end
     end
   end
 
-  private
-
-  def self.store; Divulgence.config.subscription_store; end
-  def store; self.class.store; end
+  # private
+  #
+  # def self.store; Divulgence.config.subscription_store; end
+  def store; context.subscription_store; end
 end

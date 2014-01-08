@@ -1,29 +1,31 @@
 class Divulgence::Subscriber
-  def initialize(args)
+  def initialize(store, args)
+    @store = store
     @data = args.merge(
                        token: SecureRandom.uuid,
                        subscribed_at: Time.now,
                        active: true,
                        last_sync_ts: nil
                        )
-    self.class.store.insert(@data)
+    @store.insert(@data)
   end
 
-  def self.find(criteria)
+  def self.find(store, criteria)
     store.find(criteria).map do |rec|
       subscriber = allocate
+      subscriber.instance_variable_set(:@store, store)
       subscriber.instance_variable_set(:@data, rec)
       subscriber
     end
   end
 
   def reject!
-    self.class.store.update(@data, @data.merge(active: false))
+    @store.update(@data, @data.merge(active: false))
     @data[:active] = false
   end
 
   def ping(ts = Time.now)
-    self.class.store.update(@data, @data.merge(last_sync_ts: ts))
+    @store.update(@data, @data.merge(last_sync_ts: ts))
     @data[:last_sync_ts] = ts
   end
 
@@ -35,9 +37,9 @@ class Divulgence::Subscriber
     @data.has_key?(meth) ? @data[meth] : super
   end
 
-  private
-
-  def self.store
-    Divulgence.config.subscriber_store
-  end
+  # private
+  #
+  # def self.store
+  #   Divulgence.config.subscriber_store
+  # end
 end

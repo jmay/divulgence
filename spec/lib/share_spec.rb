@@ -1,21 +1,23 @@
 require "spec_helper"
 
 describe Divulgence::Share do
-  Divulgence.config do |config|
-    config.share_store = Divulgence::MemoryStore.new
-    config.history_store = Divulgence::MemoryStore.new
-    config.subscriber_store = Divulgence::MemoryStore.new
+  before(:all) do
+    @context = Divulgence::Context.new do |config|
+      config.share_store = Divulgence::MemoryStore.new
+      config.history_store = Divulgence::MemoryStore.new
+      config.subscriber_store = Divulgence::MemoryStore.new
+    end
   end
 
   describe "null state" do
     it "should have no shares" do
-      Divulgence.shares.should be_empty
+      @context.shares.should be_empty
     end
   end
 
   context "a fresh share" do
     let(:share) do
-      Divulgence.share(info: 'stuff here')
+      @context.share(info: 'stuff here')
     end
 
     it "should be idle" do
@@ -25,7 +27,7 @@ describe Divulgence::Share do
 
     it "should appear in collection" do
       this_id = share.id
-      Divulgence.shares.map(&:id).should include(this_id)
+      @context.shares.map(&:id).should include(this_id)
     end
 
     context "with new subscribers" do
@@ -85,21 +87,21 @@ describe Divulgence::Share do
 
   describe "share with custom data" do
     before(:all) do
-      Divulgence::Share.new(id: "MYSHARE", color: 'purple')
+      @context.share(id: "MYSHARE", color: 'purple')
     end
 
     it "should be findable by id" do
-      sh = Divulgence::Share.find(id: "MYSHARE").first
+      sh = @context.shares(id: "MYSHARE").first
       sh.id.should == 'MYSHARE'
       sh.data[:color].should == 'purple'
     end
 
     it "should be findable by attribute" do
-      Divulgence::Share.find(data: {color: 'purple'}).count.should == 1
+      @context.shares(data: {color: 'purple'}).count.should == 1
     end
 
     it "can update custom data" do
-      sh = Divulgence::Share.find(id: "MYSHARE").first
+      sh = @context.shares(id: "MYSHARE").first
       sh.set(color: 'green')
       sh.data[:color].should == 'green'
     end

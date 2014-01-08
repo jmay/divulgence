@@ -1,11 +1,12 @@
 class Divulgence::History
-  def initialize(args)
-    @data = args.merge(ts: Time.now)
-    self.class.store.insert(@data)
+  def initialize(store, args)
+    @data = args
+    @data[:ts] ||= Time.now
+    store.insert(@data)
   end
 
   # always retrieve history most-recent-first
-  def self.find(criteria)
+  def self.find(store, criteria)
     Enumerator.new do |yielder|
       store.find(criteria, {sort: {ts: -1}}).map do |rec|
         event = allocate
@@ -19,9 +20,9 @@ class Divulgence::History
     @data.has_key?(meth) ? @data[meth] : super
   end
 
-  private
-
-  def self.store
-    Divulgence.config.history_store
-  end
+  # private
+  #
+  # def self.store
+  #   Divulgence.config.history_store
+  # end
 end

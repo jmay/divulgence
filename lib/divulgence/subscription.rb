@@ -66,8 +66,16 @@ class Divulgence::Subscription
     ENV['OTHERBASE_REG']
   end
 
+  # TODO: replace hard-coded timeouts with sensible values that can be controlled by app
   def self.remote_get(url)
-    RestClient.get(url, {accept: :json}) do |response, request, result|
+    RestClient::Request.execute(
+      method: :get,
+      url: url,
+      open_timeout: 2,
+      timeout: 2,
+      headers: {accept: :json}
+      ) do |response, request, result|
+    # RestClient.get(url, {accept: :json}) do |response, request, result|
       if response.code == 200
         yield JSON.parse(response.body, symbolize_names: true)
       else
@@ -77,7 +85,15 @@ class Divulgence::Subscription
   end
 
   def self.remote_post(url, payload)
-    RestClient.post(url, payload.to_json, {content_type: :json, accept: :json}) do |response, request, result|
+    RestClient::Request.execute(
+      method: :post,
+      url: url,
+      payload: payload,
+      open_timeout: 2,
+      timeout: 5,
+      headers: {content_type: :json, accept: :json}
+      ) do |response, request, result|
+    # RestClient.post(url, payload.to_json, {content_type: :json, accept: :json}) do |response, request, result|
       if response.code == 200
         yield JSON.parse(response.body, symbolize_names: true)
       else

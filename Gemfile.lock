@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    divulgence (0.2.0)
+    divulgence (0.3.0)
       rest-client
 
 GEM

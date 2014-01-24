@@ -88,7 +88,7 @@ class Divulgence::Subscription
     RestClient::Request.execute(
       method: :post,
       url: url,
-      payload: payload,
+      payload: payload.to_json,
       open_timeout: 2,
       timeout: 5,
       headers: {content_type: :json, accept: :json}
